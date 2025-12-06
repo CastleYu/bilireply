@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/sdap4mysql",
+            "destination": "https://frp-fan.com:64952/sdap4mysql"
+        }
+    ]
+}
