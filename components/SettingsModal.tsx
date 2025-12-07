@@ -59,19 +59,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <form onSubmit={handleSave} className="p-6 space-y-4">
                     <div>
                         <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">
-                            API Host
+                            <del>API HOST</del>
                         </label>
-                        <input
-                            type="text"
-                            required
-                            placeholder="https://api.example.com"
-                            value={host}
-                            onChange={(e) => setHost(e.target.value)}
-                            className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-zinc-300"
-                        />
-                        <p className="mt-1 text-xs text-zinc-400">
-                            The base URL of your backend service.
-                        </p>
+                        <del>
+                            <input
+                                type="text"
+                                // required
+                                disabled
+                                placeholder="https://api.example.com"
+                                value={host}
+                                onChange={(e) => setHost(e.target.value)}
+                                className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-zinc-300"
+                            />
+                            <p className="mt-1 text-xs text-zinc-400">
+                                The base URL of your backend service.
+                            </p>
+                        </del>
                     </div>
 
                     <div>
@@ -81,13 +84,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <input
                             type="text"
                             required
-                            placeholder="/api/replies"
+                            placeholder="/sdap4mysql"
                             value={path}
                             onChange={(e) => setPath(e.target.value)}
                             className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-zinc-300"
                         />
                         <p className="mt-1 text-xs text-zinc-400">
-                            The path to the reply query endpoint.
+                            API 端点路径 (Tip: Use <code>/sdap4mysql/...</code> for proxy)
                         </p>
                     </div>
 

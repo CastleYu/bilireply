@@ -135,7 +135,7 @@ export const ReplyItem: React.FC<ReplyItemProps> = ({data}) => {
                             </div>
                         </div>
                         <span className="text-[10px] text-zinc-300 font-mono whitespace-nowrap">
-                            {datePart}
+                            {datePart} {timePart}
                         </span>
                     </div>
 

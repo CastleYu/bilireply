@@ -27,7 +27,7 @@ const App: React.FC = () => {
     // Pagination State
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const pageSize = 50; 
+    const pageSize = 50;
 
     // Load config on mount
     useEffect(() => {
@@ -79,19 +79,44 @@ const App: React.FC = () => {
             baseUrl.searchParams.append('pageSize', pageSize.toString());
             baseUrl.searchParams.append('pageNum', currentPage.toString());
             baseUrl.searchParams.append('uid', uid);
-            
-            const response = await fetch(baseUrl.toString());
 
-            if (!response.ok) {
-                throw new Error(`后厨出错了: ${response.status} ${response.statusText}`);
+            console.log(`[BiliScout] Requesting: ${baseUrl.toString()}`);
+
+            const response = await fetch(baseUrl.toString());
+            const responseText = await response.text();
+
+            // 1. Check for HTML response (proxy/path error)
+            if (responseText.trim().startsWith('<')) {
+                const isDoctype = responseText.includes('<!DOCTYPE') || responseText.includes('<html');
+                const errorDetail = isDoctype
+                    ? `检测到返回的是网页 (HTML) 而非数据。`
+                    : `返回内容疑似非JSON格式。`;
+
+                throw new Error(
+                    `${errorDetail}\n` +
+                    `通常是因为 "Endpoint Path" 配置不正确，导致请求未经过代理。\n` +
+                    `当前请求路径: ${baseUrl.pathname}\n` +
+                    `请检查设置 (提示: 路径通常应以 /sdap4mysql 开头)`
+                );
             }
 
-            const jsonResponse = await response.json();
+            // 2. Check HTTP status
+            if (!response.ok) {
+                throw new Error(`后厨出错了: ${response.status} ${response.statusText}\n${responseText.slice(0, 100)}`);
+            }
+
+            // 3. Parse JSON
+            let jsonResponse;
+            try {
+                jsonResponse = JSON.parse(responseText);
+            } catch (e) {
+                throw new Error(`JSON解析失败: ${e instanceof Error ? e.message : String(e)}\n返回内容开头: ${responseText.slice(0, 100)}`);
+            }
 
             // Validate response structure { code, data, msg }
             if (!jsonResponse || !Array.isArray(jsonResponse.data)) {
                 console.error("Unexpected response structure:", jsonResponse);
-                throw new Error(jsonResponse?.msg || "上菜格式不对：找不到数据列表");
+                throw new Error(jsonResponse?.msg || `上菜格式不对：找不到数据列表 (code: ${jsonResponse?.code})`);
             }
 
             const newReplies: ReplyData[] = jsonResponse.data;
@@ -148,12 +173,14 @@ const App: React.FC = () => {
 
             {/* Main Header */}
             <header className="sticky top-0 z-40 bg-white border-b border-zinc-200 shadow-sm">
-                <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
+                <div
+                    className="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
 
                     {/* Logo */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-orange-100">
-                            <Utensils className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <div
+                            className="w-8 h-8 sm:w-9 sm:h-9 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-orange-100">
+                            <Utensils className="w-4 h-4 sm:w-5 sm:h-5"/>
                         </div>
                         <h1 className="hidden sm:block font-bold text-lg tracking-tight text-zinc-800">Bili食堂</h1>
                     </div>
@@ -193,10 +220,12 @@ const App: React.FC = () => {
 
             {/* Sticky User Info Sub-header */}
             {userName && (
-                <div className="sticky top-14 sm:top-16 z-30 bg-orange-50/95 backdrop-blur-sm border-b border-orange-100 shadow-sm animate-in fade-in slide-in-from-top-1">
-                    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between text-xs sm:text-sm text-orange-900">
+                <div
+                    className="sticky top-14 sm:top-16 z-30 bg-orange-50/95 backdrop-blur-sm border-b border-orange-100 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <div
+                        className="max-w-5xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between text-xs sm:text-sm text-orange-900">
                         <div className="flex items-center gap-2">
-                            <ChefHat className="w-4 h-4 text-orange-500" />
+                            <ChefHat className="w-4 h-4 text-orange-500"/>
                             <span className="opacity-70">用户 </span>
                             <span className="font-bold text-base">{userName}</span>
                         </div>
@@ -213,11 +242,12 @@ const App: React.FC = () => {
 
                     {/* Status Messages */}
                     {error && (
-                        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700">
-                            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5"/>
-                            <div>
-                                <h3 className="font-semibold text-sm">出餐失败</h3>
-                                <p className="text-sm opacity-90 break-words">{error}</p>
+                        <div
+                            className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700 shadow-sm">
+                            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600"/>
+                            <div className="flex-grow min-w-0">
+                                <h3 className="font-semibold text-sm text-red-800">出餐失败</h3>
+                                <p className="text-sm opacity-90 mt-1 whitespace-pre-wrap break-words font-mono text-xs">{error}</p>
                             </div>
                         </div>
                     )}
@@ -260,7 +290,7 @@ const App: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <Scroll className="w-4 h-4 mr-2" />
+                                            <Scroll className="w-4 h-4 mr-2"/>
                                             加餐
                                         </>
                                     )}
