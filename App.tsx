@@ -2,7 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {ApiConfig, ReplyData} from './types';
 import {SettingsModal} from './components/SettingsModal';
 import {ReplyItem} from './components/ReplyItem';
-import {Search, Loader2, AlertCircle, Settings as SettingsIcon, History} from 'lucide-react';
+import {Search, Loader2, AlertCircle, Settings as SettingsIcon, Utensils, ChefHat, Scroll, Coffee} from 'lucide-react';
 
 // Default config
 const DEFAULT_CONFIG: ApiConfig = {
@@ -20,13 +20,14 @@ const App: React.FC = () => {
 
     const [uid, setUid] = useState('');
     const [data, setData] = useState<ReplyData[]>([]);
+    const [userName, setUserName] = useState<string>(''); // Extracted from first result
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Pagination State
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const pageSize = 100; // Fixed as per requirements
+    const pageSize = 50; 
 
     // Load config on mount
     useEffect(() => {
@@ -49,15 +50,14 @@ const App: React.FC = () => {
     };
 
     const fetchData = useCallback(async (isLoadMore: boolean = false) => {
-        // Only check for path now, as host can be empty for relative paths (Nginx proxy)
         if (!config.path) {
-            setError("Please configure the API Path in settings.");
+            setError("请先在设置中配置API路径");
             setIsSettingsOpen(true);
             return;
         }
 
         if (!uid) {
-            setError("Please enter a User ID.");
+            setError("请输入取餐号 (UID)");
             return;
         }
 
@@ -73,30 +73,35 @@ const App: React.FC = () => {
             // 【修改重点】：无论 config.host 是否有值，都强制使用 window.location.origin
             // 这样生成的 URL 会是 http://localhost:3000/sdap4mysql...
             // 从而让本地代理服务器能够捕获到这个请求
+            // 此处涉及部署环境，禁止修改
             const baseUrl = new URL(config.path, window.location.origin);
 
             baseUrl.searchParams.append('pageSize', pageSize.toString());
             baseUrl.searchParams.append('pageNum', currentPage.toString());
             baseUrl.searchParams.append('uid', uid);
+            
             const response = await fetch(baseUrl.toString());
 
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                throw new Error(`后厨出错了: ${response.status} ${response.statusText}`);
             }
 
-            // 【修改开始】：解析新的响应结构 { code, data, msg }
             const jsonResponse = await response.json();
 
-            // 1. 检查是否存在 data 字段且必须是数组
+            // Validate response structure { code, data, msg }
             if (!jsonResponse || !Array.isArray(jsonResponse.data)) {
                 console.error("Unexpected response structure:", jsonResponse);
-                // 如果接口返回了 msg 字段，优先抛出该错误信息，否则抛出通用格式错误
-                throw new Error(jsonResponse.msg || "Invalid response format: 'data' field is missing or not an array.");
+                throw new Error(jsonResponse?.msg || "上菜格式不对：找不到数据列表");
             }
 
-            // 2. 提取真正的列表数据
             const newReplies: ReplyData[] = jsonResponse.data;
-            // 【修改结束】
+
+            // Extract Username from the first available item if not already set or if it's a new search
+            if (!isLoadMore && newReplies.length > 0) {
+                setUserName(newReplies[0].user_name);
+            } else if (!isLoadMore && newReplies.length === 0) {
+                setUserName('');
+            }
 
             if (isLoadMore) {
                 setData(prev => [...prev, ...newReplies]);
@@ -106,7 +111,7 @@ const App: React.FC = () => {
                 setPage(1);
             }
 
-            // If we got fewer items than page size, we've reached the end
+            // Check if we've reached the end
             if (newReplies.length < pageSize) {
                 setHasMore(false);
             } else {
@@ -115,7 +120,7 @@ const App: React.FC = () => {
 
         } catch (err) {
             console.error(err);
-            setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            setError(err instanceof Error ? err.message : "发生未知错误");
         } finally {
             setLoading(false);
         }
@@ -123,7 +128,8 @@ const App: React.FC = () => {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        setHasMore(true); // Reset hasMore on new search
+        setHasMore(true);
+        setUserName(''); // Reset name on new search
         fetchData(false);
     };
 
@@ -138,19 +144,18 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col font-sans text-zinc-900">
+        <div className="min-h-screen flex flex-col font-sans text-zinc-900 bg-zinc-50">
 
-            {/* Header */}
-            <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-zinc-200 shadow-sm">
-                <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+            {/* Main Header */}
+            <header className="sticky top-0 z-40 bg-white border-b border-zinc-200 shadow-sm">
+                <div className="max-w-5xl mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
 
-                    {/* Logo / Title */}
+                    {/* Logo */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <div
-                            className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-zinc-200">
-                            B
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-orange-100">
+                            <Utensils className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
-                        <h1 className="hidden md:block font-bold text-lg tracking-tight">ReplyScout</h1>
+                        <h1 className="hidden sm:block font-bold text-lg tracking-tight text-zinc-800">Bili食堂</h1>
                     </div>
 
                     {/* Search Bar */}
@@ -163,102 +168,117 @@ const App: React.FC = () => {
                                 type="number"
                                 value={uid}
                                 onChange={(e) => setUid(e.target.value)}
-                                placeholder="Enter Bilibili UID..."
-                                className="block w-full pl-10 pr-3 py-2 border border-zinc-200 rounded-lg leading-5 bg-zinc-50 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
+                                placeholder="请输入取餐号 (UID)..."
+                                className="block w-full pl-9 pr-3 py-1.5 sm:py-2 border border-zinc-200 rounded-lg leading-5 bg-zinc-50 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm font-mono"
                             />
                         </div>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 sm:py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm whitespace-nowrap"
                         >
-                            {loading && page === 1 ? <Loader2 className="w-4 h-4 animate-spin"/> : 'Query'}
+                            {loading && page === 1 ? <Loader2 className="w-4 h-4 animate-spin"/> : '取餐'}
                         </button>
                     </form>
 
-                    {/* Settings Trigger */}
+                    {/* Settings */}
                     <button
                         onClick={() => setIsSettingsOpen(true)}
-                        className="p-2 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-all"
-                        title="API Settings"
+                        className="p-2 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-all"
                     >
                         <SettingsIcon className="w-5 h-5"/>
                     </button>
                 </div>
             </header>
 
+            {/* Sticky User Info Sub-header */}
+            {userName && (
+                <div className="sticky top-14 sm:top-16 z-30 bg-orange-50/95 backdrop-blur-sm border-b border-orange-100 shadow-sm animate-in fade-in slide-in-from-top-1">
+                    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between text-xs sm:text-sm text-orange-900">
+                        <div className="flex items-center gap-2">
+                            <ChefHat className="w-4 h-4 text-orange-500" />
+                            <span className="opacity-70">用户 </span>
+                            <span className="font-bold text-base">{userName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-mono opacity-60">
+                            <span>UID: {uid}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Main Content */}
-            <main className="flex-grow bg-zinc-50/50">
-                <div className="max-w-5xl mx-auto px-4 py-6">
+            <main className="flex-grow">
+                <div className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
 
                     {/* Status Messages */}
                     {error && (
-                        <div
-                            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+                        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700">
                             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5"/>
                             <div>
-                                <h3 className="font-semibold text-sm">Query Failed</h3>
-                                <p className="text-sm opacity-90">{error}</p>
-                                {(!config.path) && (
-                                    <button
-                                        onClick={() => setIsSettingsOpen(true)}
-                                        className="mt-2 text-xs font-semibold underline hover:no-underline"
-                                    >
-                                        Open Settings to fix configuration
-                                    </button>
-                                )}
+                                <h3 className="font-semibold text-sm">出餐失败</h3>
+                                <p className="text-sm opacity-90 break-words">{error}</p>
                             </div>
                         </div>
                     )}
 
                     {/* Empty State */}
                     {!loading && data.length === 0 && !error && (
-                        <div className="py-20 flex flex-col items-center justify-center text-zinc-400">
-                            <History className="w-12 h-12 mb-4 opacity-20"/>
-                            <p className="text-sm">Enter a UID to search for replies.</p>
-                            <p className="text-xs mt-1 text-zinc-300">Results will appear here in high density.</p>
+                        <div className="py-24 flex flex-col items-center justify-center text-zinc-300">
+                            <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
+                                <Coffee className="w-10 h-10 text-zinc-300"/>
+                            </div>
+                            <p className="text-sm font-medium text-zinc-400">请输入取餐号 (UID) </p>
+                            <p className="text-xs mt-2 text-zinc-300">即点即食</p>
                         </div>
                     )}
 
                     {/* Results List */}
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                         {data.map((item, index) => {
+                            // Unique key generation
                             const replyId = getReplyIdFromLink(item.link) || `${index}`;
                             return (
-                                <ReplyItem key={`${replyId}-${index}`} data={item}/>
+                                <ReplyItem key={`${item.bvid}-${replyId}-${index}`} data={item}/>
                             );
                         })}
                     </div>
 
                     {/* Pagination / Load More */}
                     {data.length > 0 && (
-                        <div className="mt-8 flex justify-center pb-8">
+                        <div className="mt-8 sm:mt-10 flex flex-col items-center justify-center pb-12 gap-2">
                             {hasMore ? (
                                 <button
                                     onClick={() => fetchData(true)}
                                     disabled={loading}
-                                    className="group relative inline-flex items-center justify-center px-8 py-2.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-full hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="group relative inline-flex items-center justify-center px-8 py-3 text-sm font-bold text-orange-600 bg-white border border-orange-200 rounded-full hover:bg-orange-50 hover:border-orange-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                                 >
                                     {loading ? (
                                         <>
                                             <Loader2 className="w-4 h-4 mr-2 animate-spin"/>
-                                            Loading...
+                                            正在烹饪...
                                         </>
                                     ) : (
-                                        'Load More Replies'
+                                        <>
+                                            <Scroll className="w-4 h-4 mr-2" />
+                                            加餐
+                                        </>
                                     )}
                                 </button>
                             ) : (
-                                <span className="text-zinc-400 text-xs uppercase tracking-widest font-medium">
-                  End of History
-                </span>
+                                <div className="flex items-center gap-2 text-zinc-300 py-2">
+                                    <div className="h-px w-12 bg-zinc-200"></div>
+                                    <span className="text-xs uppercase tracking-widest font-medium">
+                                        已取餐
+                                    </span>
+                                    <div className="h-px w-12 bg-zinc-200"></div>
+                                </div>
                             )}
                         </div>
                     )}
                 </div>
             </main>
 
-            {/* Modals */}
             <SettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
