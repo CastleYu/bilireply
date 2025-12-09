@@ -1,6 +1,6 @@
 import React from 'react';
 import {ReplyData} from '../types';
-import {ThumbsUp, MessageSquare, ExternalLink, CornerDownRight, Tv, SquarePlay} from 'lucide-react';
+import {ThumbsUp, MessageSquare, ExternalLink, CornerDownRight, Tv, SquarePlay, Reply} from 'lucide-react';
 
 interface ReplyItemProps {
     data: ReplyData;
@@ -30,6 +30,8 @@ export const ReplyItem: React.FC<ReplyItemProps> = ({data}) => {
     const [datePart, timePart] = dateStr.includes(' ') ? dateStr.split(' ') : [dateStr, ''];
 
     const isReply = data.reply_type === '2';
+    // Check if content starts with "回复" to identify double-nested replies
+    const isDoubleReply = data.content.trim().startsWith('回复');
 
     return (
         <div
@@ -104,7 +106,11 @@ export const ReplyItem: React.FC<ReplyItemProps> = ({data}) => {
                             </div>
                         </div>
 
-                        {isReply && (
+                        {isDoubleReply ? (
+                            <div title="双重楼中楼" className="flex items-center text-indigo-400 ml-1 cursor-help">
+                                <Reply className="w-4 h-4"/>
+                            </div>
+                        ) : isReply && (
                             <div title="楼中楼" className="flex items-center text-orange-400 ml-1 cursor-help">
                                 <CornerDownRight className="w-4 h-4"/>
                             </div>
@@ -114,9 +120,15 @@ export const ReplyItem: React.FC<ReplyItemProps> = ({data}) => {
                     {/* Content Body */}
                     <div className="relative">
                         <p className="text-sm text-zinc-800 leading-6 whitespace-pre-wrap break-words">
-                            {isReply && <span
-                                className="sm:hidden inline-block mr-1 text-orange-400 align-middle"><CornerDownRight
-                                className="w-3.5 h-3.5"/></span>}
+                            {isDoubleReply ? (
+                                <span className="sm:hidden inline-block mr-1 text-indigo-400 align-middle">
+                                    <Reply className="w-3.5 h-3.5"/>
+                                </span>
+                            ) : isReply && (
+                                <span className="sm:hidden inline-block mr-1 text-orange-400 align-middle">
+                                    <CornerDownRight className="w-3.5 h-3.5"/>
+                                </span>
+                            )}
                             {data.content}
                         </p>
                     </div>
