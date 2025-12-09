@@ -2,12 +2,22 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {ApiConfig, ReplyData} from './types';
 import {SettingsModal} from './components/SettingsModal';
 import {ReplyItem} from './components/ReplyItem';
-import {Search, Loader2, AlertCircle, Settings as SettingsIcon, Utensils, ChefHat, Scroll, Coffee} from 'lucide-react';
+import {
+    Search,
+    Loader2,
+    AlertCircle,
+    Settings as SettingsIcon,
+    Utensils,
+    ChefHat,
+    Scroll,
+    Coffee,
+    ClipboardPaste
+} from 'lucide-react';
 
 // Default config
 const DEFAULT_CONFIG: ApiConfig = {
     host: '',
-    path: '',
+    path: '/sdap4mysql',
 };
 
 const STORAGE_KEY_CONFIG = 'bili_reply_scout_config';
@@ -34,9 +44,9 @@ const App: React.FC = () => {
         const savedConfig = localStorage.getItem(STORAGE_KEY_CONFIG);
         if (savedConfig) {
             setConfig(JSON.parse(savedConfig));
-        } else {
-            setIsSettingsOpen(true); // Open settings if no config exists
         }
+        // If no saved config, we use DEFAULT_CONFIG which now has the correct path.
+        // We generally don't need to force open settings unless something is missing.
 
         const savedUid = localStorage.getItem(STORAGE_KEY_UID);
         if (savedUid) {
@@ -49,21 +59,23 @@ const App: React.FC = () => {
         localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(newConfig));
     };
 
-    const fetchData = useCallback(async (isLoadMore: boolean = false) => {
+    const fetchData = useCallback(async (isLoadMore: boolean = false, uidOverride?: string) => {
         if (!config.path) {
             setError("请先在设置中配置API路径");
             setIsSettingsOpen(true);
             return;
         }
 
-        if (!uid) {
+        const currentUid = uidOverride ?? uid;
+
+        if (!currentUid) {
             setError("请输入取餐号 (UID)");
             return;
         }
 
         setLoading(true);
         setError(null);
-        localStorage.setItem(STORAGE_KEY_UID, uid);
+        localStorage.setItem(STORAGE_KEY_UID, currentUid);
 
         const currentPage = isLoadMore ? page + 1 : 1;
 
@@ -78,7 +90,7 @@ const App: React.FC = () => {
 
             baseUrl.searchParams.append('pageSize', pageSize.toString());
             baseUrl.searchParams.append('pageNum', currentPage.toString());
-            baseUrl.searchParams.append('uid', uid);
+            baseUrl.searchParams.append('uid', currentUid);
 
             console.log(`[BiliScout] Requesting: ${baseUrl.toString()}`);
 
@@ -158,6 +170,26 @@ const App: React.FC = () => {
         fetchData(false);
     };
 
+    const handlePasteSearch = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            // Filter non-digits
+            const numericText = text.replace(/\D/g, '');
+            if (numericText) {
+                setUid(numericText);
+                setHasMore(true);
+                setUserName('');
+                // Use the new value directly since setUid is async
+                fetchData(false, numericText);
+            } else {
+                // Optional: visual feedback if clipboard is empty or non-numeric
+                console.log("Clipboard does not contain numbers");
+            }
+        } catch (err) {
+            console.error("Failed to read clipboard", err);
+        }
+    };
+
     const getReplyIdFromLink = (link: string) => {
         try {
             const parts = link.split('#reply');
@@ -166,6 +198,14 @@ const App: React.FC = () => {
             // ignore
         }
         return '';
+    };
+
+    const handleUidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Only allow numbers
+        const value = e.target.value;
+        if (value === '' || /^\d+$/.test(value)) {
+            setUid(value);
+        }
     };
 
     return (
@@ -192,12 +232,25 @@ const App: React.FC = () => {
                                 <Search className="h-4 w-4 text-zinc-400"/>
                             </div>
                             <input
-                                type="number"
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 value={uid}
-                                onChange={(e) => setUid(e.target.value)}
+                                onChange={handleUidChange}
                                 placeholder="请输入取餐号 (UID)..."
-                                className="block w-full pl-9 pr-3 py-1.5 sm:py-2 border border-zinc-200 rounded-lg leading-5 bg-zinc-50 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm font-mono"
+                                className="block w-full pl-9 pr-10 py-1.5 sm:py-2 border border-zinc-200 rounded-lg leading-5 bg-zinc-50 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm font-mono"
                             />
+                            {/* Paste Button */}
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-1">
+                                <button
+                                    type="button"
+                                    onClick={handlePasteSearch}
+                                    className="p-1.5 text-zinc-400 hover:text-orange-500 hover:bg-zinc-100 rounded-md transition-colors"
+                                    title="粘贴并搜索"
+                                >
+                                    <ClipboardPaste className="w-4 h-4"/>
+                                </button>
+                            </div>
                         </div>
                         <button
                             type="submit"
