@@ -107,11 +107,11 @@ export const ReplyItem: React.FC<ReplyItemProps> = ({data}) => {
                         </div>
 
                         {isDoubleReply ? (
-                            <div title="双重楼中楼" className="flex items-center text-indigo-400 ml-1 cursor-help">
+                            <div title="回复之回复" className="flex items-center text-indigo-400 ml-1 cursor-help">
                                 <Reply className="w-4 h-4"/>
                             </div>
                         ) : isReply && (
-                            <div title="楼中楼" className="flex items-center text-orange-400 ml-1 cursor-help">
+                            <div title="回复" className="flex items-center text-orange-400 ml-1 cursor-help">
                                 <CornerDownRight className="w-4 h-4"/>
                             </div>
                         )}

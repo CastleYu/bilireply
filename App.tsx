@@ -2,17 +2,7 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {ApiConfig, ReplyData} from './types';
 import {SettingsModal} from './components/SettingsModal';
 import {ReplyItem} from './components/ReplyItem';
-import {
-    Search,
-    Loader2,
-    AlertCircle,
-    Settings as SettingsIcon,
-    Utensils,
-    ChefHat,
-    Scroll,
-    Coffee,
-    ClipboardPaste
-} from 'lucide-react';
+import {Search, Loader2, AlertCircle, Settings as SettingsIcon, Utensils, ChefHat, Scroll, Coffee, ClipboardPaste} from 'lucide-react';
 
 // Default config
 const DEFAULT_CONFIG: ApiConfig = {
@@ -165,6 +155,7 @@ const App: React.FC = () => {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         setHasMore(true);
         setUserName(''); // Reset name on new search
         fetchData(false);
@@ -176,6 +167,7 @@ const App: React.FC = () => {
             // Filter non-digits
             const numericText = text.replace(/\D/g, '');
             if (numericText) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 setUid(numericText);
                 setHasMore(true);
                 setUserName('');
@@ -248,7 +240,7 @@ const App: React.FC = () => {
                                     className="p-1.5 text-zinc-400 hover:text-orange-500 hover:bg-zinc-100 rounded-md transition-colors"
                                     title="粘贴并搜索"
                                 >
-                                    <ClipboardPaste className="w-4 h-4"/>
+                                    <ClipboardPaste className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
