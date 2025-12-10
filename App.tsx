@@ -2,7 +2,17 @@ import React, {useState, useEffect, useCallback} from 'react';
 import {ApiConfig, ReplyData} from './types';
 import {SettingsModal} from './components/SettingsModal';
 import {ReplyItem} from './components/ReplyItem';
-import {Search, Loader2, AlertCircle, Settings as SettingsIcon, Utensils, ChefHat, Scroll, Coffee, ClipboardPaste} from 'lucide-react';
+import {
+    Search,
+    Loader2,
+    AlertCircle,
+    Settings as SettingsIcon,
+    Utensils,
+    ChefHat,
+    Scroll,
+    Coffee,
+    ClipboardPaste
+} from 'lucide-react';
 
 // Default config
 const DEFAULT_CONFIG: ApiConfig = {
@@ -123,17 +133,20 @@ const App: React.FC = () => {
 
             const newReplies: ReplyData[] = jsonResponse.data;
 
-            // Extract Username from the first available item if not already set or if it's a new search
-            if (!isLoadMore && newReplies.length > 0) {
-                setUserName(newReplies[0].user_name);
-            } else if (!isLoadMore && newReplies.length === 0) {
+            // Handle initial search with empty results
+            if (!isLoadMore && newReplies.length === 0) {
                 setUserName('');
+                setData([]);
+                setHasMore(false);
+                setError("取餐失败，被UZI抢走了");
+                return;
             }
 
             if (isLoadMore) {
                 setData(prev => [...prev, ...newReplies]);
                 setPage(currentPage);
             } else {
+                setUserName(newReplies[0].user_name);
                 setData(newReplies);
                 setPage(1);
             }
@@ -155,7 +168,7 @@ const App: React.FC = () => {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({top: 0, behavior: 'smooth'});
         setHasMore(true);
         setUserName(''); // Reset name on new search
         fetchData(false);
@@ -167,7 +180,7 @@ const App: React.FC = () => {
             // Filter non-digits
             const numericText = text.replace(/\D/g, '');
             if (numericText) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({top: 0, behavior: 'smooth'});
                 setUid(numericText);
                 setHasMore(true);
                 setUserName('');
@@ -240,7 +253,7 @@ const App: React.FC = () => {
                                     className="p-1.5 text-zinc-400 hover:text-orange-500 hover:bg-zinc-100 rounded-md transition-colors"
                                     title="粘贴并搜索"
                                 >
-                                    <ClipboardPaste className="w-4 h-4" />
+                                    <ClipboardPaste className="w-4 h-4"/>
                                 </button>
                             </div>
                         </div>
@@ -286,7 +299,17 @@ const App: React.FC = () => {
                 <div className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
 
                     {/* Status Messages */}
-                    {error && (
+                    {error === "取餐失败，被UZI抢走了" ? (
+                        <div
+                            className="py-12 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-200">
+                            <div
+                                className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mb-4 shadow-sm border border-zinc-200">
+                                <Utensils className="w-10 h-10 text-zinc-300"/>
+                            </div>
+                            <h3 className="text-xl font-bold text-zinc-700 mb-1">取餐失败，被UZI抢走了</h3>
+                            <p className="text-sm text-zinc-400">查询结果为空</p>
+                        </div>
+                    ) : error && (
                         <div
                             className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700 shadow-sm">
                             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-600"/>
